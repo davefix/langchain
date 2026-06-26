@@ -18,27 +18,32 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib3.poolmanager import PoolManager
 
+
 class NoSSLAdapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
-        kwargs['ssl_context'] = ssl.create_default_context()
-        kwargs['ssl_context'].check_hostname = False
-        kwargs['ssl_context'].verify_mode = ssl.CERT_NONE
+        kwargs["ssl_context"] = ssl.create_default_context()
+        kwargs["ssl_context"].check_hostname = False
+        kwargs["ssl_context"].verify_mode = ssl.CERT_NONE
         return super().init_poolmanager(*args, **kwargs)
+
 
 # Apply to all requests sessions
 original_session_init = requests.Session.__init__
 
+
 def patched_session_init(self, *args, **kwargs):
     original_session_init(self, *args, **kwargs)
     adapter = NoSSLAdapter()
-    self.mount('https://', adapter)
-    self.mount('http://', adapter)
+    self.mount("https://", adapter)
+    self.mount("http://", adapter)
     self.verify = False
+
 
 requests.Session.__init__ = patched_session_init
 
 # Disable SSL warnings
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Create httpx client with SSL disabled
@@ -69,11 +74,9 @@ def main():
 
     # llm = ChatOpenAI(
     #     model="gpt-5", temperature=0, http_client=httpx_client
-    # )    
+    # )
 
-    llm = ChatOllama(
-        model="gemma3:270m", temperature=0, http_client=httpx_client
-    )    
+    llm = ChatOllama(model="gemma3:270m", temperature=0, http_client=httpx_client)
 
     chain = summary_prompt_template | llm
     result = chain.invoke(input={"information": information})
